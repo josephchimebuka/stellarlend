@@ -63,6 +63,8 @@ mod math_safety_test;
 mod upgrade_test;
 #[cfg(test)]
 mod withdraw_test;
+#[cfg(test)]
+mod race_tests;
 
 #[contract]
 pub struct LendingContract;

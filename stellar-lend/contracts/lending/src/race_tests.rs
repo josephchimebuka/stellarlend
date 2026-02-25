@@ -1,0 +1,60 @@
+use super::*;
+use soroban_sdk::{
+    testutils::{Address as _, Ledger},
+    Address, Env,
+};
+
+fn setup_race_test(
+    env: &Env,
+) -> (
+    LendingContractClient<'_>,
+    Address,
+    Address,
+    Address,
+    Address,
+) {
+    let contract_id = env.register(LendingContract, ());
+    let client = LendingContractClient::new(env, &contract_id);
+
+    let admin = Address::generate(env);
+    let user = Address::generate(env);
+    let asset = Address::generate(env);
+    let collateral_asset = Address::generate(env);
+
+    client.initialize(&admin, &1_000_000_000, &1000);
+    client.initialize_deposit_settings(&1_000_000_000, &100);
+    client.initialize_withdraw_settings(&100);
+    
+    (client, admin, user, asset, collateral_asset)
+}
+
+#[test]
+fn test_intra_block_deposit_withdraw_same_amount() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (client, _admin, user, asset, _collateral_asset) = setup_race_test(&env);
+
+    // Sequence: Deposit 10,000 then Withdraw 10,000 in same ledger
+    client.deposit(&user, &asset, &10_000);
+    client.withdraw(&user, &asset, &10_000);
+
+    let position = client.get_user_collateral_deposit(&user, &asset);
+    assert_eq!(position.amount, 0);
+}
+
+#[test]
+fn test_intra_block_borrow_repay() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (client, _admin, user, asset, collateral_asset) = setup_race_test(&env);
+
+    // Initial deposit for collateral
+    client.deposit(&user, &collateral_asset, &50_000);
+
+    // Sequence: Borrow 10,000 then Repay 5,000
+    client.borrow(&user, &asset, &10_000, &collateral_asset, &20_000);
+    client.repay(&user, &asset, &5_000);
+
+    let debt = client.get_user_debt(&user);
+    assert_eq!(debt.borrowed_amount, 5_000);
+}
