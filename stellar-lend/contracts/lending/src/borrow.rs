@@ -5,7 +5,7 @@
 //!
 //! [Issue #391] Optimized gas usage by migrating protocol settings to Instance storage.
 
-use crate::pause::{self, PauseType};
+use crate::pause::{self, blocks_high_risk_ops, is_recovery, PauseType};
 use soroban_sdk::{contracterror, contractevent, contracttype, Address, Env, I256};
 
 #[contracterror]
@@ -78,7 +78,7 @@ pub fn borrow(
 ) -> Result<(), BorrowError> {
     user.require_auth();
 
-    if pause::is_paused(env, PauseType::Borrow) {
+    if pause::is_paused(env, PauseType::Borrow) || blocks_high_risk_ops(env) {
         return Err(BorrowError::ProtocolPaused);
     }
 
@@ -136,6 +136,21 @@ pub fn borrow(
 // ═══════════════════════════════════════════════════════════════════
 // PERFORMANCE OPTIMIZATIONS: Instance Storage Migration
 // ═══════════════════════════════════════════════════════════════════
+/// Deposit collateral
+///
+/// # Arguments
+/// * `env` - The contract environment
+/// * `user` - The user's address
+/// * `asset` - The collateral asset
+/// * `amount` - The amount to deposit
+pub fn deposit(env: &Env, user: Address, asset: Address, amount: i128) -> Result<(), BorrowError> {
+    if pause::is_paused(env, PauseType::Deposit) || blocks_high_risk_ops(env) {
+        return Err(BorrowError::ProtocolPaused);
+    }
+
+    if amount <= 0 {
+        return Err(BorrowError::InvalidAmount);
+    }
 
 fn get_min_borrow_amount(env: &Env) -> i128 {
     env.storage()
@@ -150,6 +165,39 @@ fn get_debt_ceiling(env: &Env) -> i128 {
         .get(&BorrowDataKey::BorrowDebtCeiling)
         .unwrap_or(i128::MAX)
 }
+/// Repay borrowed assets
+///
+/// # Arguments
+/// * `env` - The contract environment
+/// * `user` - The user's address
+/// * `asset` - The borrowed asset
+/// * `amount` - The amount to repay
+pub fn repay(env: &Env, user: Address, asset: Address, amount: i128) -> Result<(), BorrowError> {
+    if pause::is_paused(env, PauseType::Repay) || (!is_recovery(env) && blocks_high_risk_ops(env)) {
+        return Err(BorrowError::ProtocolPaused);
+    }
+
+    if amount <= 0 {
+        return Err(BorrowError::InvalidAmount);
+    }
+
+    let mut debt_position = get_debt_position(env, &user);
+
+    if debt_position.borrowed_amount == 0 && debt_position.interest_accrued == 0 {
+        return Err(BorrowError::InvalidAmount);
+    }
+
+    if debt_position.asset != asset {
+        return Err(BorrowError::AssetNotSupported);
+    }
+
+    // First repay interest, then principal
+    let accrued_interest = calculate_interest(env, &debt_position);
+    debt_position.interest_accrued = debt_position
+        .interest_accrued
+        .checked_add(accrued_interest)
+        .ok_or(BorrowError::Overflow)?;
+    debt_position.last_update = env.ledger().timestamp();
 
 fn get_total_debt(env: &Env) -> i128 {
     env.storage()
