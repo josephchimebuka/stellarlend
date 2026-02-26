@@ -1,9 +1,7 @@
 #![cfg(test)]
 
-use soroban_sdk::{
-    contract, contractimpl, testutils::Address as _, Address, Env, Symbol,
-};
 use crate::{HelloContract, HelloContractClient};
+use soroban_sdk::{contract, contractimpl, testutils::Address as _, Address, Env, Symbol};
 
 #[contract]
 pub struct MaliciousToken;
@@ -17,7 +15,7 @@ impl MaliciousToken {
     pub fn transfer_from(env: Env, _spender: Address, from: Address, _to: Address, _amount: i128) {
         Self::attempt_reentrancy(&env, &from);
     }
-    
+
     pub fn transfer(env: Env, _from: Address, to: Address, _amount: i128) {
         Self::attempt_reentrancy(&env, &to);
     }
@@ -27,7 +25,11 @@ impl MaliciousToken {
     fn attempt_reentrancy(env: &Env, user: &Address) {
         // Retrieve the HelloContract address from temporary storage
         let target_key = Symbol::new(env, "TEST_TARGET");
-        if let Some(target) = env.storage().temporary().get::<Symbol, Address>(&target_key) {
+        if let Some(target) = env
+            .storage()
+            .temporary()
+            .get::<Symbol, Address>(&target_key)
+        {
             let client = HelloContractClient::new(env, &target);
             let token_opt = Some(env.current_contract_address());
 
@@ -176,9 +178,10 @@ fn test_reentrancy_on_repay() {
             &Position {
                 collateral: 10000,
                 debt: 1000,
-            borrow_interest: 0,
-            last_accrual_time: env.ledger().timestamp(),
-        });
+                borrow_interest: 0,
+                last_accrual_time: env.ledger().timestamp(),
+            },
+        );
     });
 
     client.repay_debt(&user, &Some(token_id), &500);

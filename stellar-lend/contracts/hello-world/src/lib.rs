@@ -46,7 +46,7 @@ use oracle::{
 
 use config::{config_backup, config_get, config_restore, config_set, ConfigError};
 
-use flash_loan::{FlashLoanConfig};
+use flash_loan::FlashLoanConfig;
 
 #[allow(unused_imports)]
 use bridge::{
@@ -576,7 +576,13 @@ impl HelloContract {
         max_slippage: i128,
         auto_swap_threshold: i128,
     ) -> Result<(), amm::AmmError> {
-        amm::initialize_amm(env, admin, default_slippage, max_slippage, auto_swap_threshold)
+        amm::initialize_amm(
+            env,
+            admin,
+            default_slippage,
+            max_slippage,
+            auto_swap_threshold,
+        )
     }
 
     /// Set AMM pool configuration (admin only).
@@ -589,7 +595,11 @@ impl HelloContract {
     }
 
     /// Execute swap through AMM.
-    pub fn amm_swap(env: Env, user: Address, params: amm::SwapParams) -> Result<i128, amm::AmmError> {
+    pub fn amm_swap(
+        env: Env,
+        user: Address,
+        params: amm::SwapParams,
+    ) -> Result<i128, amm::AmmError> {
         amm::amm_swap(env, user, params)
     }
 

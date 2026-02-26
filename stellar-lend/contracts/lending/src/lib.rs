@@ -60,9 +60,9 @@ mod data_store_test;
 #[cfg(test)]
 mod math_safety_test;
 #[cfg(test)]
-mod upgrade_test;
-#[cfg(test)]
 mod upgrade_migration_safety_test;
+#[cfg(test)]
+mod upgrade_test;
 #[cfg(test)]
 mod withdraw_test;
 
@@ -440,7 +440,7 @@ impl LendingContract {
     pub fn data_key_exists(env: Env, key: soroban_sdk::String) -> bool {
         data_store::DataStore::key_exists(env, key)
     }
-  
+
     /// Initialize borrow settings (admin only)
     pub fn initialize_borrow_settings(
         env: Env,
