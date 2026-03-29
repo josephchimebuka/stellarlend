@@ -47,6 +47,23 @@ const mockStellarService: jest.Mocked<StellarService> = {
     horizon: true,
     sorobanRpc: true,
   }),
+  getTransactionHistory: jest.fn().mockResolvedValue({
+    transactions: [
+      {
+        transactionHash: 'tx_hash_1',
+        type: 'deposit',
+        amount: '1000000',
+        assetAddress: 'GTEST123...',
+        timestamp: '2023-01-01T00:00:00Z',
+        status: 'success',
+        ledger: 12345,
+      },
+    ],
+    pagination: {
+      hasNextPage: false,
+      limit: 10,
+    },
+  }),
 } as any;
 (StellarService as jest.Mock).mockImplementation(() => mockStellarService);
 
@@ -261,7 +278,7 @@ describe('Lending Controller', () => {
     it('should return unhealthy status when services are down', async () => {
       mockStellarService.healthCheck.mockResolvedValueOnce({
         horizon: false,
-        sorobanRpc: false,
+        sorobanRpc: true,
       });
 
       const response = await request(app).get('/api/health');
