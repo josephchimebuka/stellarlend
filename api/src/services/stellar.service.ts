@@ -13,7 +13,14 @@ import axios from 'axios';
 import { config } from '../config';
 import logger from '../utils/logger';
 import { InternalServerError } from '../utils/errors';
-import { TransactionResponse, LendingOperation, ProtocolStatsResponse } from '../types';
+import {
+  TransactionResponse,
+  LendingOperation,
+  ProtocolStatsResponse,
+  TransactionHistoryItem,
+  TransactionHistoryQuery,
+  TransactionHistoryResponse,
+} from '../types';
 import { BoundedTtlCache } from '../utils/boundedTtlCache';
 
 const CONTRACT_METHODS: Record<LendingOperation, string> = {
